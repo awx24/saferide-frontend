@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SafeRide – محفوظ سفر | Pakistan's #1 School Van App</title>
+<meta name="description" content="SafeRide is Pakistan's safest school van transport platform. Real-time GPS, driver registration, parental controls, live attendance — built for Pakistani families."/>
+<meta property="og:title" content="SafeRide Pakistan – محفوظ سفر"/>
+<meta property="og:description" content="Pakistan's most trusted school van transport app."/>
+<meta property="og:type" content="website"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ============================================================
+   DESIGN TOKENS & RESET
+============================================================ */
+:root{
+  --g1:#00c853;--g2:#00e676;--gdark:#007c32;
+  --teal:#00bfa5;--blue:#1565c0;--purple:#6c3483;
+  --navy:#080f1e;--navy2:#0a1628;--navy3:#0d1f3c;--navy4:#112240;
+  --card:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.09);
+  --tp:#e8f0fe;--tm:#7a95b5;--ts:#4a6080;
+  --r:16px;--r2:24px;--sh:0 8px 40px rgba(0,0,0,.5);
+  --tr:.3s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--navy);color:var(--tp);overflow-x:hidden;line-height:1.6}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--navy)}
+::-webkit-scrollbar-thumb{background:var(--g1);border-radius:9px}
+img{max-width:100%;display:block}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;font-family:inherit}
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+.glass{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.glass-strong{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);backdrop-filter:blur(24px)}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:99px;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.b-green{background:rgba(0,200,83,.15);color:var(--g2);border:1px solid rgba(0,200,83,.3)}
+.b-teal{background:rgba(0,191,165,.15);color:#4dd0e1;border:1px solid rgba(0,191,165,.3)}
+.b-orange{background:rgba(255,167,38,.15);color:#ffcc80;border:1px solid rgba(255,167,38,.3)}
+.b-red{background:rgba(229,57,53,.15);color:#ff8a80;border:1px solid rgba(229,57,53,.3)}
+.b-purple{background:rgba(156,39,176,.15);color:#ce93d8;border:1px solid rgba(156,39,176,.3)}
+.b-blue{background:rgba(33,150,243,.15);color:#90caf9;border:1px solid rgba(33,150,243,.3)}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g1);animation:ldot 1.4s ease infinite;margin-right:5px}
+@keyframes ldot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.75)}}
+.divider{width:52px;height:3px;background:linear-gradient(90deg,var(--g1),var(--teal));border-radius:9px;margin:14px auto 0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ============================================================
+   NAVBAR
+============================================================ */
+nav{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;align-items:center;justify-content:space-between;padding:0 4%;height:66px;background:rgba(8,15,30,.88);backdrop-filter:blur(22px);border-bottom:1px solid rgba(255,255,255,.07);transition:var(--tr)}
+nav.scrolled{box-shadow:0 4px 30px rgba(0,0,0,.5)}
+.logo{display:flex;align-items:center;gap:10px;font-size:1.28rem;font-weight:800;color:#fff}
+.logo-icon{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--g1),var(--teal));display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0}
+.logo span{color:var(--g1)}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{color:var(--tm);font-size:.9rem;font-weight:500;transition:color var(--tr);position:relative;padding:4px 0}
+.nav-links a::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:2px;background:var(--g1);border-radius:9px;transition:width var(--tr)}
+.nav-links a:hover{color:var(--g1)}
+.nav-links a:hover::after{width:100%}
+.nav-right{display:flex;gap:10px;align-items:center}
+.btn-login{padding:8px 20px;border-radius:99px;border:1px solid rgba(255,255,255,.2);color:var(--tp);background:transparent;font-size:.85rem;font-weight:600;transition:var(--tr)}
+.btn-login:hover{border-color:var(--g1);color:var(--g1)}
+.btn-signup{padding:8px 20px;border-radius:99px;background:linear-gradient(135deg,var(--g1),var(--teal));color:#000;font-size:.85rem;font-weight:700;border:none;transition:var(--tr)}
+.btn-signup:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,200,83,.45)}
+.ham{display:none;flex-direction:column;gap:5px;background:none;border:none;padding:4px}
+.ham span{width:24px;height:2px;background:#fff;border-radius:9px;transition:var(--tr)}
+
+/* ============================================================
+   HERO
+============================================================ */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:130px 5% 90px;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 75% 55% at 50% 15%,rgba(0,200,83,.13) 0%,transparent 65%),radial-gradient(ellipse 45% 45% at 85% 80%,rgba(0,191,165,.09) 0%,transparent 60%),radial-gradient(ellipse 30% 30% at 15% 70%,rgba(21,101,192,.07) 0%,transparent 60%)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:55px 55px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 75%);-webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 75%)}
+.hero-particles{position:absolute;inset:0;pointer-events:none}
+.particle{position:absolute;border-radius:50%;animation:pFloat linear infinite}
+@keyframes pFloat{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:.6}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+.hero-content{position:relative;max-width:820px}
+.hero-eyebrow{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:900;line-height:1.1;margin-bottom:16px;letter-spacing:-.02em}
+.hero h1 .hl{color:var(--g1);position:relative}
+.hero h1 .hl::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--g1),var(--teal));border-radius:9px}
+.hero-urdu{font-family:'Noto Nastaliq Urdu',serif;direction:rtl;font-size:1.55rem;font-weight:600;color:var(--tm);margin-bottom:26px;display:block;line-height:2}
+.hero-sub{font-size:1.08rem;color:var(--tm);max-width:580px;margin:0 auto 38px;line-height:1.8}
+.hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn-hero-p{display:inline-flex;align-items:center;gap:8px;padding:14px 34px;border-radius:99px;background:linear-gradient(135deg,var(--g1),var(--teal));color:#000;font-size:1rem;font-weight:800;border:none;transition:var(--tr)}
+.btn-hero-p:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(0,200,83,.5)}
+.btn-hero-o{display:inline-flex;align-items:center;gap:8px;padding:14px 34px;border-radius:99px;border:1px solid rgba(255,255,255,.22);color:#fff;background:rgba(255,255,255,.06);font-size:1rem;font-weight:600;transition:var(--tr)}
+.btn-hero-o:hover{background:rgba(255,255,255,.12);transform:translateY(-2px)}
+.hero-stats{display:flex;gap:48px;justify-content:center;margin-top:68px;flex-wrap:wrap}
+.hs-num{font-size:2.1rem;font-weight:900;color:var(--g1);font-variant-numeric:tabular-nums}
+.hs-label{font-size:.78rem;color:var(--tm);margin-top:2px;font-weight:500}
+.hero-float{position:absolute;bottom:80px;right:6%;padding:16px 20px;border-radius:18px;display:flex;align-items:center;gap:12px;animation:hfloat 3.5s ease-in-out infinite}
+.hero-float2{position:absolute;bottom:200px;left:4%;animation-delay:1.8s}
+@keyframes hfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.hf-icon{font-size:1.5rem}
+.hf-label{font-size:.72rem;color:var(--tm)}
+.hf-val{font-size:.92rem;font-weight:700;color:var(--g1)}
+
+/* ============================================================
+   ROLE TABS (dashboard view switcher)
+============================================================ */
+.role-section{background:var(--navy2);padding:28px 5%}
+.role-wrap{max-width:700px;margin:0 auto;text-align:center}
+.role-label{font-size:.85rem;color:var(--tm);margin-bottom:14px;font-weight:500}
+.role-tabs{display:inline-flex;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:5px;gap:4px}
+.role-btn{padding:10px 26px;border-radius:99px;border:none;background:transparent;color:var(--tm);font-size:.88rem;font-weight:600;transition:var(--tr)}
+.role-btn.active{background:linear-gradient(135deg,var(--g1),var(--teal));color:#000}
+.role-btn:hover:not(.active){color:var(--g1)}
+
+/* ============================================================
+   SECTIONS SHARED
+============================================================ */
+section{padding:96px 5%}
+.sec-tag{text-align:center;margin-bottom:12px}
+.sec-title{text-align:center;font-size:clamp(1.8rem,4vw,2.7rem);font-weight:800;margin-bottom:12px;letter-spacing:-.01em}
+.sec-sub{text-align:center;color:var(--tm);max-width:600px;margin:0 auto 56px;font-size:1.02rem}
+
+/* ============================================================
+   FEATURES GRID
+============================================================ */
+.feat-section{background:var(--navy3)}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;max-width:1200px;margin:0 auto}
+.feat-card{border-radius:var(--r2);padding:32px 28px;transition:var(--tr);position:relative;overflow:hidden}
+.feat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,200,83,.06),transparent);opacity:0;transition:var(--tr)}
+.feat-card:hover{transform:translateY(-7px);box-shadow:var(--sh)}
+.feat-card:hover::before{opacity:1}
+.feat-icon{width:58px;height:58px;border-radius:15px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:linear-gradient(135deg,rgba(0,200,83,.18),rgba(0,191,165,.1));border:1px solid rgba(0,200,83,.25);transition:var(--tr)}
+.feat-card:hover .feat-icon{transform:scale(1.1) rotate(-4deg)}
+.feat-card h3{font-size:1.1rem;font-weight:700;margin-bottom:10px}
+.feat-card p{color:var(--tm);font-size:.88rem;line-height:1.75}
+
+/* ============================================================
+   STATS BAR
+============================================================ */
+.stats-bar{background:linear-gradient(135deg,rgba(0,200,83,.09),rgba(0,191,165,.06));border-top:1px solid rgba(0,200,83,.12);border-bottom:1px solid rgba(0,200,83,.12);padding:48px 5%}
+.stats-wrap{display:flex;align-items:center;justify-content:space-around;max-width:1100px;margin:0 auto;flex-wrap:wrap;gap:36px}
+.stat-item{text-align:center}
+.stat-num{font-size:2.6rem;font-weight:900;color:var(--g1);display:block;font-variant-numeric:tabular-nums}
+.stat-label{font-size:.8rem;color:var(--tm);font-weight:500;margin-top:4px}
+.stat-divider{width:1px;height:56px;background:rgba(255,255,255,.1)}
+
+/* ============================================================
+   DRIVER REGISTRATION
+============================================================ */
+.drv-section{background:var(--navy2)}
+.drv-layout{display:grid;grid-template-columns:1fr 1fr;gap:56px;max-width:1120px;margin:0 auto;align-items:start}
+.drv-info h3{font-size:1.5rem;font-weight:700;margin-bottom:14px}
+.drv-info>p{color:var(--tm);margin-bottom:28px;line-height:1.85}
+.drv-perks{display:flex;flex-direction:column;gap:14px}
+.perk{display:flex;align-items:flex-start;gap:14px;padding:18px;border-radius:14px;transition:var(--tr)}
+.perk:hover{transform:translateX(4px)}
+.perk-ic{font-size:1.4rem;flex-shrink:0;margin-top:2px}
+.perk strong{display:block;font-weight:700;margin-bottom:3px;font-size:.95rem}
+.perk span{font-size:.82rem;color:var(--tm)}
+/* form */
+.drv-form{border-radius:var(--r2);padding:36px}
+.form-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.form-title2{font-size:1.15rem;font-weight:700}
+.step-info{font-size:.78rem;color:var(--tm);font-weight:600}
+.steps-bar{display:flex;gap:6px;margin-bottom:28px}
+.sdot{flex:1;height:4px;border-radius:9px;background:rgba(255,255,255,.1);transition:var(--tr)}
+.sdot.active{background:var(--g1)}
+.sdot.done{background:rgba(0,200,83,.4)}
+.form-step{display:none}
+.form-step.active{display:block}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:.82rem;font-weight:600;color:var(--tm);margin-bottom:6px}
+.fg input,.fg select,.fg textarea{width:100%;padding:12px 15px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--tp);font-family:inherit;font-size:.92rem;outline:none;transition:border-color var(--tr);-webkit-appearance:none}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--g1);box-shadow:0 0 0 3px rgba(0,200,83,.12)}
+.fg select option{background:var(--navy4);color:var(--tp)}
+.fg textarea{resize:vertical;min-height:80px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.upload-zone{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px;border-radius:12px;border:2px dashed rgba(255,255,255,.15);cursor:pointer;transition:var(--tr);text-align:center}
+.upload-zone:hover{border-color:var(--g1);background:rgba(0,200,83,.04)}
+.upload-zone input{display:none}
+.upload-zone .uz-ic{font-size:1.8rem;margin-bottom:4px}
+.upload-zone .uz-txt{font-size:.8rem;color:var(--tm)}
+.upload-zone .uz-sub{font-size:.7rem;color:var(--ts)}
+.fn{display:flex;gap:10px;margin-top:18px}
+.btn-next{flex:1;padding:13px;border-radius:10px;background:var(--g1);color:#000;border:none;font-weight:700;font-size:.92rem;transition:var(--tr)}
+.btn-next:hover{background:var(--g2);transform:translateY(-1px)}
+.btn-bk{flex:0 0 auto;padding:13px 20px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--tp);font-weight:600;font-size:.92rem;transition:var(--tr)}
+.btn-bk:hover{background:rgba(255,255,255,.12)}
+.btn-sub{width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,var(--g1),var(--teal));color:#000;border:none;font-weight:800;font-size:1rem;transition:var(--tr);margin-top:10px}
+.btn-sub:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,200,83,.5)}
+.success-wrap{text-align:center;display:none;padding:20px 10px}
+.success-wrap .sic{font-size:3.5rem;margin-bottom:14px;animation:popIn .5s ease}
+@keyframes popIn{0%{transform:scale(0)}80%{transform:scale(1.15)}100%{transform:scale(1)}}
+.success-wrap h4{font-size:1.25rem;font-weight:800;color:var(--g1);margin-bottom:10px}
+.success-wrap p{color:var(--tm);font-size:.9rem;line-height:1.75}
+
+/* ============================================================
+   PARENTAL CONTROL
+============================================================ */
+.par-section{background:var(--navy4)}
+.par-layout{max-width:1120px;margin:0 auto}
+.par-tabs{display:flex;gap:8px;margin-bottom:30px;flex-wrap:wrap}
+.ptab{padding:10px 22px;border-radius:99px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--tm);font-size:.86rem;font-weight:600;transition:var(--tr)}
+.ptab.active{background:var(--g1);color:#000;border-color:var(--g1)}
+.ptab:hover:not(.active){border-color:var(--g1);color:var(--g1)}
+.ppanel{display:none}
+.ppanel.active{display:block}
+/* tracking layout */
+.track-grid{display:grid;grid-template-columns:340px 1fr;gap:22px}
+#liveMap{height:440px;border-radius:var(--r2);border:1px solid var(--border)}
+.track-sidebar{display:flex;flex-direction:column;gap:14px}
+.van-card{border-radius:16px;padding:18px 20px}
+.vc-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.vc-av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--teal));display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0}
+.vc-name{font-weight:700;font-size:.93rem;line-height:1.3}
+.vc-sub{font-size:.76rem;color:var(--tm)}
+.prog-bg{height:5px;background:rgba(255,255,255,.08);border-radius:9px;margin-top:8px;overflow:hidden}
+.prog-fill{height:100%;border-radius:9px;background:linear-gradient(90deg,var(--g1),var(--teal));transition:width 1.2s ease}
+.eta-txt{font-size:.76rem;color:var(--tm);margin-top:5px}
+.info-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:.84rem}
+.info-row span:first-child{color:var(--tm)}
+.info-row span:last-child{font-weight:600}
+.sos-btn{width:100%;padding:15px;border-radius:13px;background:linear-gradient(135deg,#e53935,#b71c1c);color:#fff;border:none;font-size:.95rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;transition:var(--tr);animation:sosPulse 2.5s ease infinite}
+@keyframes sosPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.5)}50%{box-shadow:0 0 0 10px rgba(229,57,53,0)}}
+.sos-btn:hover{transform:scale(1.02)}
+/* geofence */
+#gMap{height:420px;border-radius:var(--r2);border:1px solid var(--border);margin-bottom:18px}
+.gf-ctrl{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn-gf{padding:10px 22px;border-radius:99px;font-size:.85rem;font-weight:600;border:none;transition:var(--tr)}
+.btn-gf.school{background:var(--g1);color:#000}
+.btn-gf.home{background:#42a5f5;color:#000}
+.btn-gf.del{background:rgba(229,57,53,.15);color:#ff8a80;border:1px solid rgba(229,57,53,.35)}
+.gf-count{font-size:.82rem;color:var(--tm);margin-top:10px}
+.gf-count span{color:var(--g1);font-weight:700}
+/* alerts */
+.alerts{display:flex;flex-direction:column;gap:11px}
+.al-item{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:15px;transition:var(--tr)}
+.al-item:hover{transform:translateX(4px)}
+.al-ic{font-size:1.25rem;flex-shrink:0;margin-top:2px}
+.al-txt strong{display:block;font-weight:600;font-size:.92rem;margin-bottom:2px}
+.al-txt span{font-size:.8rem;color:var(--tm)}
+.al-time{margin-left:auto;font-size:.75rem;color:var(--ts);white-space:nowrap;flex-shrink:0}
+
+/* ============================================================
+   LIVE ATTENDANCE
+============================================================ */
+.att-section{background:var(--navy2)}
+.att-layout{max-width:1120px;margin:0 auto}
+.att-topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:24px}
+.att-meta{font-size:.82rem;color:var(--tm)}
+.att-meta strong{color:var(--tp);font-weight:700}
+.search-box{padding:10px 18px;border-radius:99px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--tp);font-family:inherit;font-size:.88rem;outline:none;width:250px;transition:border-color var(--tr)}
+.search-box:focus{border-color:var(--g1)}
+.att-stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:26px}
+.as-card{flex:1;min-width:130px;border-radius:15px;padding:20px;text-align:center;transition:var(--tr)}
+.as-card:hover{transform:translateY(-3px)}
+.as-num{font-size:1.9rem;font-weight:900}
+.as-lbl{font-size:.75rem;color:var(--tm);font-weight:500;margin-top:3px}
+.tbl-wrap{border-radius:var(--r2);overflow:hidden;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}
+thead th{padding:13px 16px;text-align:left;font-size:.76rem;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.09em;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border)}
+tbody tr{transition:background var(--tr)}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+tbody td{padding:13px 16px;font-size:.89rem;border-bottom:1px solid rgba(255,255,255,.04)}
+tbody tr:last-child td{border-bottom:none}
+.spill{display:inline-block;padding:4px 12px;border-radius:99px;font-size:.72rem;font-weight:700}
+.sp-p{background:rgba(0,200,83,.14);color:var(--g1)}
+.sp-a{background:rgba(229,57,53,.14);color:#ff8a80}
+.sp-pen{background:rgba(255,193,7,.14);color:#ffd54f}
+.mark-p{padding:6px 14px;border-radius:99px;font-family:inherit;font-size:.76rem;font-weight:600;border:1px solid rgba(0,200,83,.3);background:rgba(0,200,83,.08);color:var(--g1);transition:var(--tr)}
+.mark-p:hover{background:rgba(0,200,83,.2)}
+.mark-a{padding:6px 14px;border-radius:99px;font-family:inherit;font-size:.76rem;font-weight:600;border:1px solid rgba(229,57,53,.3);background:rgba(229,57,53,.08);color:#ff8a80;transition:var(--tr)}
+.mark-a:hover{background:rgba(229,57,53,.2)}
+.av-chip{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:800;background:linear-gradient(135deg,var(--gdark),var(--teal));flex-shrink:0}
+
+/* ============================================================
+   ANALYTICS DASHBOARD
+============================================================ */
+.ana-section{background:var(--navy3)}
+.ana-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;max-width:1120px;margin:0 auto}
+.chart-card{border-radius:var(--r2);padding:28px;position:relative;overflow:hidden}
+.chart-card h4{font-size:1rem;font-weight:700;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.chart-card h4 span{font-size:.75rem;color:var(--tm);font-weight:500}
+.mini-stats{display:flex;gap:16px;margin-bottom:20px}
+.ms-item{flex:1;border-radius:12px;padding:14px;text-align:center}
+.ms-num{font-size:1.35rem;font-weight:800}
+.ms-lbl{font-size:.72rem;color:var(--tm);margin-top:3px}
+
+/* ============================================================
+   HOW IT WORKS
+============================================================ */
+.how-section{background:var(--navy4)}
+.how-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:26px;max-width:1120px;margin:0 auto;position:relative}
+.how-card{border-radius:var(--r2);padding:32px 26px;text-align:center;position:relative;transition:var(--tr)}
+.how-card:hover{transform:translateY(-6px)}
+.how-num{width:56px;height:56px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:900;background:linear-gradient(135deg,var(--g1),var(--teal));color:#000}
+.how-card h4{font-size:1rem;font-weight:700;margin-bottom:10px}
+.how-card p{font-size:.86rem;color:var(--tm);line-height:1.78}
+
+/* ============================================================
+   TESTIMONIALS
+============================================================ */
+.test-section{background:var(--navy2)}
+.test-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px;max-width:1120px;margin:0 auto}
+.test-card{border-radius:var(--r2);padding:28px;transition:var(--tr)}
+.test-card:hover{transform:translateY(-4px);box-shadow:var(--sh)}
+.stars{color:#ffc107;font-size:.88rem;letter-spacing:3px;margin-bottom:14px}
+.test-txt{font-size:.93rem;color:var(--tm);line-height:1.82;font-style:italic;margin-bottom:20px}
+.test-author{display:flex;align-items:center;gap:12px}
+.t-av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--teal));display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.t-name{font-weight:700;font-size:.88rem}
+.t-role{font-size:.75rem;color:var(--tm)}
+
+/* ============================================================
+   DOWNLOAD
+============================================================ */
+.dl-section{padding:100px 5%;background:linear-gradient(135deg,rgba(0,200,83,.09),rgba(0,191,165,.06));border-top:1px solid rgba(0,200,83,.14);text-align:center}
+.dl-section h2{font-size:clamp(1.8rem,4vw,2.7rem);font-weight:900;margin-bottom:14px}
+.dl-section p{color:var(--tm);margin-bottom:38px;font-size:1.05rem}
+.store-wrap{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.store-btn{display:flex;align-items:center;gap:13px;padding:15px 28px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);color:#fff;transition:var(--tr)}
+.store-btn:hover{background:rgba(255,255,255,.13);transform:translateY(-4px);box-shadow:var(--sh)}
+.st-ic{font-size:1.9rem}
+.st-sub{font-size:.65rem;color:var(--tm)}
+.st-name{font-size:1rem;font-weight:700}
+.qr-badge{display:inline-flex;align-items:center;gap:10px;margin-top:30px;padding:14px 22px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);font-size:.85rem;color:var(--tm)}
+.qr-box{width:56px;height:56px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#000;font-weight:800;text-align:center}
+
+/* ============================================================
+   FOOTER
+============================================================ */
+footer{background:var(--navy);border-top:1px solid rgba(255,255,255,.06);padding:64px 5% 28px}
+.ft-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:44px;max-width:1120px;margin:0 auto 44px}
+.ft-about p{color:var(--tm);font-size:.88rem;line-height:1.85;margin-top:12px}
+.ft-urdu{font-family:'Noto Nastaliq Urdu',serif;direction:rtl;font-size:.98rem;color:var(--ts);margin-top:12px}
+.ft-col h5{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tm);margin-bottom:16px}
+.ft-col ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.ft-col ul li a{color:var(--tm);font-size:.86rem;transition:color var(--tr)}
+.ft-col ul li a:hover{color:var(--g1)}
+.ft-btm{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding-top:24px;border-top:1px solid rgba(255,255,255,.06);font-size:.8rem;color:var(--tm);flex-wrap:wrap;gap:12px}
+.ft-logo{display:flex;align-items:center;gap:8px;color:#fff;font-weight:800;font-size:.95rem}
+.ft-logo span{color:var(--g1)}
+
+/* ============================================================
+   MODALS
+============================================================ */
+.moverlay{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+.moverlay.open{display:flex}
+.mbox{background:var(--navy4);border:1px solid var(--border);border-radius:24px;padding:40px 36px;max-width:480px;width:100%;position:relative;animation:mIn .35s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.9) translateY(24px)}to{opacity:1;transform:none}}
+.mcls{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.07);border:none;color:var(--tm);width:32px;height:32px;border-radius:50%;font-size:.95rem;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
+.mcls:hover{background:rgba(255,255,255,.14);color:#fff}
+.m-ic{font-size:2.6rem;text-align:center;margin-bottom:14px}
+.m-title{font-size:1.3rem;font-weight:800;text-align:center;margin-bottom:6px}
+.m-sub{color:var(--tm);text-align:center;font-size:.88rem;margin-bottom:26px}
+.m-tabs{display:flex;background:rgba(255,255,255,.05);border-radius:10px;padding:4px;gap:4px;margin-bottom:22px}
+.mtab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;color:var(--tm);font-size:.86rem;font-weight:600;transition:var(--tr)}
+.mtab.active{background:var(--g1);color:#000}
+.sos-contacts{display:flex;flex-direction:column;gap:11px}
+.sc{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:13px}
+.sc-ic{font-size:1.35rem}
+.sc-name{font-weight:600;font-size:.92rem}
+.sc-num{font-size:.8rem;color:var(--tm)}
+.sc-btn{margin-left:auto;padding:8px 16px;border-radius:99px;background:rgba(0,200,83,.13);color:var(--g1);border:1px solid rgba(0,200,83,.3);font-size:.78rem;font-weight:600;transition:var(--tr)}
+.sc-btn:hover{background:rgba(0,200,83,.28)}
+
+/* ============================================================
+   TOAST
+============================================================ */
+#tc{position:fixed;bottom:24px;right:22px;z-index:3000;display:flex;flex-direction:column;gap:9px}
+.toast{display:flex;align-items:center;gap:11px;padding:13px 18px;border-radius:13px;min-width:270px;background:var(--navy4);border:1px solid var(--border);box-shadow:var(--sh);animation:tIn .35s ease}
+.toast.s{border-left:3px solid var(--g1)}
+.toast.e{border-left:3px solid #e53935}
+.toast.i{border-left:3px solid #42a5f5}
+.t-ic{font-size:1.15rem}
+.t-msg{font-size:.88rem;font-weight:500}
+@keyframes tIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+@media(max-width:1000px){
+  .drv-layout,.track-grid,.ft-grid,.ana-grid{grid-template-columns:1fr}
+  .fr{grid-template-columns:1fr}
+  #liveMap,#gMap{height:320px}
+  .track-sidebar{flex-direction:row;flex-wrap:wrap}
+  .van-card{flex:1 1 240px}
+}
+@media(max-width:700px){
+  .nav-links,.nav-right{display:none}
+  .ham{display:flex}
+  nav.open .nav-links{display:flex;flex-direction:column;position:fixed;top:66px;left:0;right:0;background:var(--navy3);padding:22px 5% 28px;border-bottom:1px solid rgba(255,255,255,.07);gap:16px;z-index:899}
+  nav.open .nav-right{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--navy3);padding:14px 5%;border-top:1px solid rgba(255,255,255,.07);justify-content:center;z-index:899}
+  .hero-float,.hero-float2{display:none}
+  .ft-grid{grid-template-columns:1fr 1fr}
+  .role-tabs{flex-wrap:wrap}
+  .att-topbar{flex-direction:column;align-items:flex-start}
+  .search-box{width:100%}
+}
+@media(max-width:440px){
+  .ft-grid{grid-template-columns:1fr}
+  .mbox{padding:28px 20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ NAVBAR ══════════════ -->
+<nav id="nav">
+  <a class="logo" href="#home" aria-label="SafeRide Home">
+    <div class="logo-icon" aria-hidden="true">🚐</div>
+    <div>Safe<span>Ride</span></div>
+  </a>
+  <ul class="nav-links" id="navLinks" role="list">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#driver">Driver Register</a></li>
+    <li><a href="#parental">Parental Control</a></li>
+    <li><a href="#attendance">Attendance</a></li>
+    <li><a href="#analytics">Analytics</a></li>
+  </ul>
+  <div class="nav-right" id="navRight">
+    <button class="btn-login" onclick="openM('loginModal')">Log In</button>
+    <button class="btn-signup" onclick="openM('loginModal')">Get Started</button>
+  </div>
+  <button class="ham" id="hamBtn" aria-label="Toggle menu" onclick="toggleNav()">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- ══════════════ HERO ══════════════ -->
+<section class="hero" id="home" aria-label="Hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-grid" aria-hidden="true"></div>
+  <canvas class="hero-particles" id="particleCanvas" aria-hidden="true"></canvas>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span class="badge b-green">🇵🇰 Made for Pakistan</span>
+      <span class="badge b-teal">✅ 1,200+ Verified Drivers</span>
+    </div>
+    <h1>Pakistan ka <span class="hl">Sabse Mehfooz</span><br/>School Van App</h1>
+    <span class="hero-urdu">بچوں کا محفوظ سفر — ہمارا وعدہ ہے</span>
+    <p class="hero-sub">Real-time GPS tracking · Verified drivers · Parental controls · Live attendance<br/>Built exclusively for Pakistani schools &amp; families.</p>
+    <div class="hero-cta">
+      <a href="#driver" class="btn-hero-p">🚐 Register as Driver</a>
+      <a href="#parental" class="btn-hero-o">📍 Track My Child</a>
+    </div>
+    <div class="hero-stats">
+      <div><div class="hs-num" id="ctr1">0</div><div class="hs-label">Registered Drivers</div></div>
+      <div><div class="hs-num" id="ctr2">0</div><div class="hs-label">Students Transported Daily</div></div>
+      <div><div class="hs-num" id="ctr3">0</div><div class="hs-label">Cities Covered</div></div>
+      <div><div class="hs-num" id="ctr4">0</div><div class="hs-label">SOS Alerts Handled</div></div>
+    </div>
+  </div>
+  <div class="glass hero-float">
+    <div class="hf-icon">📍</div>
+    <div>
+      <div class="hf-label"><span class="live-dot"></span>Live Tracking</div>
+      <div class="hf-val" id="floatEta">Van arriving in 4 min</div>
+    </div>
+  </div>
+  <div class="glass hero-float hero-float2">
+    <div class="hf-icon">✅</div>
+    <div>
+      <div class="hf-label">Attendance</div>
+      <div class="hf-val">18 / 20 picked up</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ ROLE SWITCHER ══════════════ -->
+<div class="role-section">
+  <div class="role-wrap">
+    <div class="role-label">Viewing dashboard as:</div>
+    <div class="role-tabs">
+      <button class="role-btn active" onclick="setRole('parent',this)">👨‍👩‍👧 Parent</button>
+      <button class="role-btn" onclick="setRole('driver',this)">🚐 Driver</button>
+      <button class="role-btn" onclick="setRole('school',this)">🏫 School Admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ FEATURES ══════════════ -->
+<section class="feat-section" id="features">
+  <div class="sec-tag"><span class="badge b-teal">Platform Features</span></div>
+  <h2 class="sec-title">Everything Your Family Needs</h2>
+  <div class="divider"></div>
+  <p class="sec-sub">One platform for parents, drivers, and schools — designed around Pakistani school routes, languages, and payment systems.</p>
+  <div class="feat-grid">
+    <div class="feat-card glass">
+      <div class="feat-icon">📍</div>
+      <h3>Real-Time GPS Tracking</h3>
+      <p>Watch the school van move live on an interactive map. Automatic ETA updates, route deviation alerts, and stop-by-stop confirmations.</p>
+    </div>
+    <div class="feat-card glass">
+      <div class="feat-icon">🚐</div>
+      <h3>Driver Registration &amp; Verification</h3>
+      <p>Multi-step CNIC, license, and vehicle document submission. Police clearance integration. Full background check before first ride.</p>
+    </div>
+    <div class="feat-card glass">
+      <div class="feat-icon">👨‍👩‍👧</div>
+      <h3>Parental Control Panel</h3>
+      <p>Track vans, set custom geofence safe zones, manage child profiles, restrict routes, and get push notifications for every milestone.</p>
+    </div>
+    <div class="feat-card glass">
+      <div class="feat-icon">📋</div>
+      <h3>Live Attendance — حاضری</h3>
+      <p>Driver taps to mark pickup and drop-off. Parents and schools get instant WhatsApp + in-app notifications. Daily PDF reports available.</p>
+    </div>
+    <div class="feat-card glass">
+      <div class="feat-icon">🆘</div>
+      <h3>SOS Emergency Alert</h3>
+      <p>One tap sends GPS location, van photo, and alert to parents, school admin, and local police. Connected to Rescue 1122 &amp; Edhi.</p>
+    </div>
+    <div class="feat-card glass">
+      <div class="feat-icon">💳</div>
+      <h3>JazzCash / Easypaisa Pay</h3>
+      <p>Monthly van fees paid digitally. No cash. Automatic WhatsApp receipts. Split payments, advance booking, and instalment support.</p>
+    </div>
+    <div class="feat-card glass">
+      <div class="feat-icon">📊</div>
+      <h3>Analytics Dashboard</h3>
+      <p>School admins see daily attendance trends, route efficiency, driver ratings, and revenue reports — all in visual, shareable dashboards.</p>
+    </div>
+    <div class="feat-card glass">
+      <div class="feat-icon">🌐</div>
+      <h3>Urdu Interface</h3>
+      <p>Full Urdu language support for drivers and parents who prefer communicating in their native language. RTL layout included.</p>
+    </div>
+    <div class="feat-card glass">
+      <div class="feat-icon">🛡️</div>
+      <h3>Insurance &amp; Safety Guarantee</h3>
+      <p>Every trip covered by basic passenger insurance. Vetted drivers only. School confirmation required before van allocation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ STATS BAR ══════════════ -->
+<div class="stats-bar">
+  <div class="stats-wrap">
+    <div class="stat-item">
+      <span class="stat-num" data-target="1200">0</span>
+      <div class="stat-label">Verified Drivers</div>
+    </div>
+    <div class="stat-divider" aria-hidden="true"></div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="8400">0</span>
+      <div class="stat-label">Students Daily</div>
+    </div>
+    <div class="stat-divider" aria-hidden="true"></div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="14">0</span>
+      <div class="stat-label">Cities Covered</div>
+    </div>
+    <div class="stat-divider" aria-hidden="true"></div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="99">0</span>
+      <div class="stat-label">% On-Time Rate</div>
+    </div>
+    <div class="stat-divider" aria-hidden="true"></div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="320">0</span>
+      <div class="stat-label">Schools Partnered</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DRIVER REGISTRATION ══════════════ -->
+<section class="drv-section" id="driver">
+  <div class="sec-tag"><span class="badge b-orange">For Drivers</span></div>
+  <h2 class="sec-title">Register as a SafeRide Driver</h2>
+  <div class="divider"></div>
+  <p class="sec-sub">Join Pakistan's most trusted school transport network. Earn consistently every month and keep children safe.</p>
+  <div class="drv-layout">
+    <div class="drv-info">
+      <h3>Kyun SafeRide ke saath Drive karein?</h3>
+      <p>We connect verified, professional van drivers with schools across Pakistan. Get stable monthly income, free training, insurance coverage, and the pride of keeping children safe every single day.</p>
+      <div class="drv-perks">
+        <div class="perk glass">
+          <div class="perk-ic">💰</div>
+          <div><strong>PKR 35,000–70,000 / Month</strong><span>Guaranteed income based on your route and student count. Paid on time, every month.</span></div>
+        </div>
+        <div class="perk glass">
+          <div class="perk-ic">🛡️</div>
+          <div><strong>Passenger Insurance Included</strong><span>SafeRide provides basic vehicle and passenger insurance on every trip — at no cost to you.</span></div>
+        </div>
+        <div class="perk glass">
+          <div class="perk-ic">📱</div>
+          <div><strong>Free Driver App (Android)</strong><span>Manage your route, mark attendance, and receive monthly payments — all from one free app.</span></div>
+        </div>
+        <div class="perk glass">
+          <div class="perk-ic">🕌</div>
+          <div><strong>Flexible Islamic Schedule</strong><span>Work 7 AM–3 PM on school days only. Fridays, weekends, and all public holidays off automatically.</span></div>
+        </div>
+        <div class="perk glass">
+          <div class="perk-ic">📚</div>
+          <div><strong>Free Driver Training</strong><span>SafeRide provides child safety, first aid, and defensive driving training — completely free of charge.</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Multi-Step Form -->
+    <div class="drv-form glass" id="drvFormWrap">
+      <div class="form-hdr">
+        <div class="form-title2">Driver Registration</div>
+        <div class="step-info" id="stepInfo">Step 1 of 3</div>
+      </div>
+      <div class="steps-bar">
+        <div class="sdot active" id="sd1"></div>
+        <div class="sdot" id="sd2"></div>
+        <div class="sdot" id="sd3"></div>
+      </div>
+      <!-- Step 1 -->
+      <div class="form-step active" id="fs1">
+        <div class="fg"><label for="dn">Full Name (as per CNIC) *</label><input id="dn" type="text" placeholder="e.g. Muhammad Usman Khan" required/></div>
+        <div class="fr">
+          <div class="fg"><label for="dc">CNIC Number *</label><input id="dc" type="text" placeholder="XXXXX-XXXXXXX-X" maxlength="15" required/></div>
+          <div class="fg"><label for="dp">Mobile Number *</label><input id="dp" type="tel" placeholder="03XX-XXXXXXX" required/></div>
+        </div>
+        <div class="fg"><label for="dct">City *</label>
+          <select id="dct" required>
+            <option value="">-- Select City --</option>
+            <option>Karachi</option><option>Lahore</option><option>Islamabad</option>
+            <option>Rawalpindi</option><option>Faisalabad</option><option>Multan</option>
+            <option>Peshawar</option><option>Quetta</option><option>Hyderabad</option>
+            <option>Sialkot</option><option>Gujranwala</option><option>Abbottabad</option>
+          </select>
+        </div>
+        <div class="fg"><label for="da">Home Address *</label><input id="da" type="text" placeholder="Street, Area, City" required/></div>
+        <div class="fg"><label for="de">Email (Optional)</label><input id="de" type="email" placeholder="driver@example.com"/></div>
+        <div class="fn"><button class="btn-next" onclick="ns(1)">Next: Vehicle Info →</button></div>
+      </div>
+      <!-- Step 2 -->
+      <div class="form-step" id="fs2">
+        <div class="fr">
+          <div class="fg"><label for="dvt">Vehicle Type *</label>
+            <select id="dvt" required>
+              <option value="">-- Select --</option>
+              <option>Suzuki Bolan (7-seat)</option>
+              <option>Toyota HiAce Mini Van (12-seat)</option>
+              <option>Toyota HiAce Hi-Roof (14-seat)</option>
+              <option>Coaster / Saloon (30-seat)</option>
+            </select>
+          </div>
+          <div class="fg"><label for="dvp">Plate Number *</label><input id="dvp" type="text" placeholder="e.g. LHR-ABC-123" required/></div>
+        </div>
+        <div class="fr">
+          <div class="fg"><label for="dvm">Vehicle Model &amp; Year *</label><input id="dvm" type="text" placeholder="e.g. Toyota HiAce 2020" required/></div>
+          <div class="fg"><label for="dvc">Seating Capacity *</label><input id="dvc" type="number" placeholder="e.g. 12" min="1" max="50" required/></div>
+        </div>
+        <div class="fg"><label for="dlic">Driving License No. *</label><input id="dlic" type="text" placeholder="License number" required/></div>
+        <div class="fg">
+          <label>Upload CNIC (Front &amp; Back) *</label>
+          <label class="upload-zone">
+            <div class="uz-ic">📎</div>
+            <div class="uz-txt" id="cnicTxt">Click or drag to upload CNIC images</div>
+            <div class="uz-sub">JPG, PNG — Max 5 MB each</div>
+            <input type="file" accept="image/*" multiple id="cnicFile" onchange="fileChg(this,'cnicTxt')"/>
+          </label>
+        </div>
+        <div class="fg">
+          <label>Upload Vehicle Registration *</label>
+          <label class="upload-zone">
+            <div class="uz-ic">📄</div>
+            <div class="uz-txt" id="regTxt">Click to upload vehicle registration</div>
+            <div class="uz-sub">PDF or Image — Max 5 MB</div>
+            <input type="file" accept="image/*,.pdf" id="regFile" onchange="fileChg(this,'regTxt')"/>
+          </label>
+        </div>
+        <div class="fn">
+          <button class="btn-bk" onclick="ps(2)">← Back</button>
+          <button class="btn-next" onclick="ns(2)">Next: Route Info →</button>
+        </div>
+      </div>
+      <!-- Step 3 -->
+      <div class="form-step" id="fs3">
+        <div class="fg"><label for="dsc">Preferred School / Area *</label><input id="dsc" type="text" placeholder="e.g. Beaconhouse DHA Branch, Lahore" required/></div>
+        <div class="fg"><label for="drt">Route Description *</label><textarea id="drt" placeholder="e.g. Johar Town → Garden Town → Model Town → deliver to school and return"></textarea></div>
+        <div class="fr">
+          <div class="fg"><label for="dex">Years of Experience *</label>
+            <select id="dex" required>
+              <option value="">-- Select --</option>
+              <option>Less than 1 year</option><option>1–2 years</option>
+              <option>3–5 years</option><option>6–10 years</option><option>10+ years</option>
+            </select>
+          </div>
+          <div class="fg"><label for="djc">JazzCash / Bank Account</label><input id="djc" type="text" placeholder="Account for payments"/></div>
+        </div>
+        <div class="fg"><label for="dref">Guarantor / Reference Name</label><input id="dref" type="text" placeholder="Optional — someone who can vouch for you"/></div>
+        <div class="fn"><button class="btn-bk" onclick="ps(3)">← Back</button></div>
+        <button class="btn-sub" onclick="submitDrv()">Submit Registration ✓</button>
+      </div>
+      <!-- Success -->
+      <div class="success-wrap" id="drvSuccess">
+        <div class="sic">✅</div>
+        <h4>Registration Submitted!</h4>
+        <p>Our team will review your application within <strong>2–3 working days</strong>.<br/>We'll call you at the number you provided.</p>
+        <p style="margin-top:14px;color:var(--g1);font-weight:700;font-size:1rem;">JazakAllah Khair 🙏</p>
+        <p style="margin-top:8px;color:var(--tm);font-size:.82rem;">Reference ID: <strong style="color:var(--g1)" id="refId"></strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ PARENTAL CONTROL ══════════════ -->
+<section class="par-section" id="parental">
+  <div class="sec-tag"><span class="badge b-green">For Parents</span></div>
+  <h2 class="sec-title">Parental Control Centre</h2>
+  <div class="divider"></div>
+  <p class="sec-sub">Track your child's van live, set safe zones, view full alert history, and get notified for every pickup and drop.</p>
+  <div class="par-layout">
+    <div class="par-tabs">
+      <button class="ptab active" id="ptab-live" onclick="pTab('live')">📍 Live Tracking</button>
+      <button class="ptab" id="ptab-geo" onclick="pTab('geo')">🔒 Geofence Zones</button>
+      <button class="ptab" id="ptab-alerts" onclick="pTab('alerts')">🔔 Alert History</button>
+      <button class="ptab" id="ptab-child" onclick="pTab('child')">👧 Child Profile</button>
+    </div>
+
+    <!-- Live Tracking -->
+    <div class="ppanel active" id="pp-live">
+      <div class="track-grid">
+        <div class="track-sidebar">
+          <div class="van-card glass">
+            <div class="vc-top">
+              <div class="vc-av">🚐</div>
+              <div>
+                <div class="vc-name">Van #PK-47 · Route B</div>
+                <div class="vc-sub"><span class="live-dot"></span>Live · Usman Javed</div>
+              </div>
+            </div>
+            <div class="info-row"><span>📍 Location</span><span>Canal Rd, Gulberg III</span></div>
+            <div class="info-row"><span>🚗 Speed</span><span id="vanSpeed">34 km/h</span></div>
+            <div class="info-row"><span>👧 Status</span><span style="color:var(--g1)">✅ On Board</span></div>
+            <div class="prog-bg"><div class="prog-fill" id="pFill" style="width:62%"></div></div>
+            <div class="eta-txt" id="etaTxt">Arriving in ~6 min · 3.2 km remaining</div>
+          </div>
+          <div class="van-card glass">
+            <div class="info-row" style="font-size:.82rem;color:var(--tm);margin-bottom:8px">👧 Your Child</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="av-chip">AR</div>
+              <div>
+                <div style="font-weight:700;font-size:.92rem">Aisha Rahman</div>
+                <div style="font-size:.75rem;color:var(--g1)">✅ Picked up · 7:32 AM</div>
+              </div>
+            </div>
+          </div>
+          <div class="van-card glass">
+            <div style="font-size:.82rem;color:var(--tm);margin-bottom:10px">🚐 Driver Info</div>
+            <div class="info-row"><span>Name</span><span>Usman Javed</span></div>
+            <div class="info-row"><span>Rating</span><span>⭐ 4.9 / 5</span></div>
+            <div class="info-row"><span>Trips</span><span>1,243 completed</span></div>
+            <div class="info-row"><span>Phone</span><span><a href="tel:+923001234567" style="color:var(--g1)">0300-1234567</a></span></div>
+          </div>
+          <button class="sos-btn" onclick="openM('sosModal')">🆘 Emergency SOS</button>
+        </div>
+        <div id="liveMap" aria-label="Live GPS Map"></div>
+      </div>
+    </div>
+
+    <!-- Geofence -->
+    <div class="ppanel" id="pp-geo">
+      <p style="color:var(--tm);margin-bottom:16px;font-size:.9rem">Set safe zones on the map. You'll receive an alert when the van enters or exits any zone.</p>
+      <div id="gMap" aria-label="Geofence Map"></div>
+      <div class="gf-ctrl">
+        <button class="btn-gf school" onclick="addZone('school')">🏫 Set School Zone</button>
+        <button class="btn-gf home" onclick="addZone('home')">🏠 Set Home Zone</button>
+        <button class="btn-gf del" onclick="clearZones()">✕ Clear All</button>
+      </div>
+      <div class="gf-count">Active zones: <span id="zc">0 zones set</span></div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="ppanel" id="pp-alerts">
+      <div class="alerts">
+        <div class="al-item glass"><div class="al-ic">✅</div><div class="al-txt"><strong>Aisha picked up</strong><span>Van #PK-47 stopped at Johar Town — confirmed on board</span></div><div class="al-time">Today 7:32 AM</div></div>
+        <div class="al-item glass"><div class="al-ic">🏫</div><div class="al-txt"><strong>Entered School Zone</strong><span>City Grammar School — Aisha delivered safely</span></div><div class="al-time">Today 8:04 AM</div></div>
+        <div class="al-item glass"><div class="al-ic">🔔</div><div class="al-txt"><strong>Van departing school in 10 min</strong><span>Pick-up: 2:00 PM · Van #PK-47 · Usman Javed</span></div><div class="al-time">Yesterday 1:50 PM</div></div>
+        <div class="al-item glass"><div class="al-ic">🏠</div><div class="al-txt"><strong>Aisha dropped home safely</strong><span>Van stopped at Johar Town. Trip: 26 minutes.</span></div><div class="al-time">Yesterday 2:28 PM</div></div>
+        <div class="al-item glass"><div class="al-ic">⚠️</div><div class="al-txt"><strong>Route delay — heavy traffic</strong><span>Van #PK-47 delayed ~10 min · Canal Road congestion</span></div><div class="al-time">Mon 7:58 AM</div></div>
+        <div class="al-item glass"><div class="al-ic">💳</div><div class="al-txt"><strong>Monthly fee paid — PKR 3,500</strong><span>July 2026 payment confirmed via JazzCash</span></div><div class="al-time">Jul 1 · 9:10 AM</div></div>
+      </div>
+    </div>
+
+    <!-- Child Profile -->
+    <div class="ppanel" id="pp-child">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
+        <div class="glass" style="border-radius:var(--r2);padding:28px">
+          <div style="text-align:center;margin-bottom:20px">
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--teal));display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 12px">👧</div>
+            <div style="font-weight:800;font-size:1.1rem">Aisha Rahman</div>
+            <div style="color:var(--tm);font-size:.82rem;margin-top:4px">Grade 5 · City Grammar School</div>
+          </div>
+          <div class="info-row"><span>📍 Pickup</span><span>Johar Town Stop 1</span></div>
+          <div class="info-row"><span>🏠 Drop</span><span>Johar Town Home</span></div>
+          <div class="info-row"><span>🚐 Van</span><span>#PK-47</span></div>
+          <div class="info-row"><span>⏰ Pickup Time</span><span>7:30 AM</span></div>
+          <div class="info-row"><span>📅 Enrolled Since</span><span>Jan 2026</span></div>
+          <button class="btn-sub" style="margin-top:16px" onclick="showToast('i','✏️','Edit profile — feature coming soon!')">Edit Profile</button>
+        </div>
+        <div class="glass" style="border-radius:var(--r2);padding:28px">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:18px">📊 Attendance This Month</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+            <div class="ms-item glass" style="border-radius:12px"><div class="ms-num" style="color:var(--g1)">18</div><div class="ms-lbl">Present</div></div>
+            <div class="ms-item glass" style="border-radius:12px"><div class="ms-num" style="color:#ff8a80">2</div><div class="ms-lbl">Absent</div></div>
+            <div class="ms-item glass" style="border-radius:12px"><div class="ms-num" style="color:#ffd54f">90</div><div class="ms-lbl">% Rate</div></div>
+          </div>
+          <canvas id="childChart" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ LIVE ATTENDANCE ══════════════ -->
+<section class="att-section" id="attendance">
+  <div class="sec-tag"><span class="badge b-teal">Live Attendance — حاضری</span></div>
+  <h2 class="sec-title">Haazri System</h2>
+  <div class="divider"></div>
+  <p class="sec-sub">Drivers mark attendance at every stop. Parents and school admins see real-time updates. Daily PDF reports auto-generated.</p>
+  <div class="att-layout">
+    <div class="att-stats">
+      <div class="as-card glass"><div class="as-num" style="color:var(--g1)" id="aP">0</div><div class="as-lbl">Present Today</div></div>
+      <div class="as-card glass"><div class="as-num" style="color:#ff8a80" id="aA">0</div><div class="as-lbl">Absent</div></div>
+      <div class="as-card glass"><div class="as-num" style="color:#ffd54f" id="aPen">0</div><div class="as-lbl">Pending</div></div>
+      <div class="as-card glass"><div class="as-num" id="aT">0</div><div class="as-lbl">Total Students</div></div>
+      <div class="as-card glass"><div class="as-num" style="color:var(--teal)" id="aRate">0%</div><div class="as-lbl">Attendance Rate</div></div>
+    </div>
+    <div class="att-topbar">
+      <div>
+        <div class="att-meta"><span class="live-dot"></span>Live · Van #PK-47 · Morning Shift</div>
+        <div style="font-weight:700;font-size:1rem;margin-top:4px" id="todayDate"></div>
+      </div>
+      <input class="search-box" id="sBox" type="text" placeholder="🔍 Search student or stop..." oninput="filterAtt(this.value)"/>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th><th>Grade</th><th>Pickup Stop</th>
+            <th>Status</th><th>Time</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="attBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ ANALYTICS ══════════════ -->
+<section class="ana-section" id="analytics">
+  <div class="sec-tag"><span class="badge b-purple">Analytics Dashboard</span></div>
+  <h2 class="sec-title">Real-Time Analytics</h2>
+  <div class="divider"></div>
+  <p class="sec-sub">Comprehensive reporting for school administrators, fleet managers, and investors.</p>
+  <div class="ana-grid">
+    <div class="chart-card glass">
+      <h4>Weekly Attendance <span>Last 7 Days</span></h4>
+      <canvas id="attChart"></canvas>
+    </div>
+    <div class="chart-card glass">
+      <h4>Revenue — PKR <span>Last 6 Months</span></h4>
+      <canvas id="revChart"></canvas>
+    </div>
+    <div class="chart-card glass">
+      <h4>Student Distribution <span>By City</span></h4>
+      <canvas id="cityChart"></canvas>
+    </div>
+    <div class="chart-card glass">
+      <h4>Driver Performance <span>Rating vs Trips</span></h4>
+      <div class="mini-stats">
+        <div class="ms-item glass"><div class="ms-num" style="color:var(--g1)">4.8</div><div class="ms-lbl">Avg Rating</div></div>
+        <div class="ms-item glass"><div class="ms-num" style="color:var(--teal)">98%</div><div class="ms-lbl">On-Time</div></div>
+        <div class="ms-item glass"><div class="ms-num" style="color:#ffd54f">3</div><div class="ms-lbl">Incidents</div></div>
+      </div>
+      <canvas id="drvChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ HOW IT WORKS ══════════════ -->
+<section class="how-section" id="how">
+  <div class="sec-tag"><span class="badge b-green">Simple Process</span></div>
+  <h2 class="sec-title">How SafeRide Works</h2>
+  <div class="divider"></div>
+  <p class="sec-sub">Getting started takes less than 5 minutes for both parents and drivers.</p>
+  <div class="how-grid">
+    <div class="how-card glass">
+      <div class="how-num">1</div>
+      <h4>Register Your Child</h4>
+      <p>Create a parent account, add child details, school, and confirm pickup / drop addresses in your city.</p>
+    </div>
+    <div class="how-card glass">
+      <div class="how-num">2</div>
+      <h4>Match with Verified Van</h4>
+      <p>We match your child with a background-checked, CNIC-verified driver on an approved route near you.</p>
+    </div>
+    <div class="how-card glass">
+      <div class="how-num">3</div>
+      <h4>Track Every Trip</h4>
+      <p>Watch the van live on the map, receive attendance confirmations, and review daily reports.</p>
+    </div>
+    <div class="how-card glass">
+      <div class="how-num">4</div>
+      <h4>Pay Digitally</h4>
+      <p>Monthly fees via JazzCash or Easypaisa. Auto receipts to your WhatsApp. No cash. No hassle.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ TESTIMONIALS ══════════════ -->
+<section class="test-section" id="testimonials">
+  <div class="sec-tag"><span class="badge b-teal">Parent Stories</span></div>
+  <h2 class="sec-title">What Pakistani Parents Say</h2>
+  <div class="divider"></div>
+  <p class="sec-sub">Trusted by thousands of families across Karachi, Lahore, Islamabad, and beyond.</p>
+  <div class="test-grid">
+    <div class="test-card glass">
+      <div class="stars">★★★★★</div>
+      <p class="test-txt">"Pehle bahut tension rehti thi ke beti school pahunchi ya nahi. Ab SafeRide se live track karta hoon — bilkul chain ho gaya hai. Best app for Pakistani parents."</p>
+      <div class="test-author"><div class="t-av">👨</div><div><div class="t-name">Tariq Mehmood</div><div class="t-role">Parent · Lahore, DHA Phase 5</div></div></div>
+    </div>
+    <div class="test-card glass">
+      <div class="stars">★★★★★</div>
+      <p class="test-txt">"The attendance notification is brilliant. I know the exact second my son boards the van. No more calls to the driver. Highly recommend to all Karachi parents!"</p>
+      <div class="test-author"><div class="t-av">👩</div><div><div class="t-name">Sana Riaz</div><div class="t-role">Parent · Karachi, Clifton Block 4</div></div></div>
+    </div>
+    <div class="test-card glass">
+      <div class="stars">★★★★★</div>
+      <p class="test-txt">"SafeRide ka registration process bahut professional hai. CNIC verification aur background check se parents ko poora trust milta hai. This is what Pakistan needed."</p>
+      <div class="test-author"><div class="t-av">🧑</div><div><div class="t-name">Adnan Sheikh</div><div class="t-role">School Coordinator · Islamabad, F-7</div></div></div>
+    </div>
+    <div class="test-card glass">
+      <div class="stars">★★★★★</div>
+      <p class="test-txt">"As a driver, SafeRide gave me stable income, insurance, and a professional image. The app is easy, and parents trust me because I'm verified. Bohat acha platform hai."</p>
+      <div class="test-author"><div class="t-av">🚐</div><div><div class="t-name">Rizwan Ahmed</div><div class="t-role">SafeRide Driver · Rawalpindi</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ DOWNLOAD CTA ══════════════ -->
+<section class="dl-section" id="download">
+  <div class="sec-tag"><span class="badge b-green">Free Download</span></div>
+  <h2>Abhi Download Karein<br/><span style="color:var(--g1)">ابھی ڈاؤن لوڈ کریں</span></h2>
+  <p>Available on Android &amp; iOS. Free for parents. Start keeping your child safe today.</p>
+  <div class="store-wrap">
+    <a href="#" class="store-btn">
+      <div class="st-ic">▶️</div>
+      <div><div class="st-sub">Get it on</div><div class="st-name">Google Play</div></div>
+    </a>
+    <a href="#" class="store-btn">
+      <div class="st-ic">🍎</div>
+      <div><div class="st-sub">Download on</div><div class="st-name">App Store</div></div>
+    </a>
+  </div>
+  <div class="qr-badge">
+    <div class="qr-box">SCAN<br/>QR</div>
+    <div style="text-align:left"><div style="font-weight:700;color:var(--tp);margin-bottom:4px">Scan to Download</div><div>Point camera at QR code to install the app</div></div>
+  </div>
+</section>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer id="contact">
+  <div class="ft-grid">
+    <div class="ft-about">
+      <div class="logo" style="gap:10px"><div class="logo-icon">🚐</div><div>Safe<span>Ride</span></div></div>
+      <p>Pakistan's most trusted school van transport platform. Keeping children safe across 14 cities since 2024.</p>
+      <div class="ft-urdu">بچوں کا محفوظ سفر — ہمارا وعدہ</div>
+      <div style="margin-top:14px;display:flex;gap:10px">
+        <span class="badge b-green" style="font-size:.68rem">🏆 Best EdTech App 2025</span>
+        <span class="badge b-teal" style="font-size:.68rem">🔒 ISO 27001</span>
+      </div>
+    </div>
+    <div class="ft-col">
+      <h5>Company</h5>
+      <ul>
+        <li><a href="#">About SafeRide</a></li>
+        <li><a href="#">Our Team</a></li>
+        <li><a href="#">Press &amp; Media</a></li>
+        <li><a href="#">Careers</a></li>
+        <li><a href="#">Investor Relations</a></li>
+      </ul>
+    </div>
+    <div class="ft-col">
+      <h5>Services</h5>
+      <ul>
+        <li><a href="#driver">Driver Registration</a></li>
+        <li><a href="#parental">Parental Control</a></li>
+        <li><a href="#attendance">Attendance System</a></li>
+        <li><a href="#analytics">Analytics</a></li>
+        <li><a href="#">School Admin Panel</a></li>
+      </ul>
+    </div>
+    <div class="ft-col">
+      <h5>Contact</h5>
+      <ul>
+        <li><a href="tel:+920300SAFERIDE">0300-SAFERIDE</a></li>
+        <li><a href="mailto:support@saferide.pk">support@saferide.pk</a></li>
+        <li><a href="#">WhatsApp Support</a></li>
+        <li><a href="#">Head Office: DHA Lahore</a></li>
+        <li><a href="#">KHI Office: Clifton Karachi</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="ft-btm">
+    <div class="ft-logo">🚐 Safe<span>Ride</span> Pakistan</div>
+    <div>© 2026 SafeRide Pvt. Ltd. All rights reserved.</div>
+    <div>
+      <a href="#" style="color:var(--tm);margin-right:14px">Privacy Policy</a>
+      <a href="#" style="color:var(--tm);margin-right:14px">Terms of Service</a>
+      <a href="#" style="color:var(--tm)">PDPA Compliance</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════════ LOGIN MODAL ══════════════ -->
+<div class="moverlay" id="loginModal" role="dialog" aria-modal="true" aria-label="Login">
+  <div class="mbox">
+    <button class="mcls" onclick="closeM('loginModal')" aria-label="Close">✕</button>
+    <div class="m-ic">🚐</div>
+    <div class="m-title">Welcome to SafeRide</div>
+    <div class="m-sub">Sign in or create your account to get started.</div>
+    <div class="m-tabs">
+      <button class="mtab active" onclick="mTab('l',this)">Log In</button>
+      <button class="mtab" onclick="mTab('s',this)">Sign Up</button>
+    </div>
+    <div id="lForm">
+      <div class="fg"><label for="lph">Mobile Number</label><input type="tel" id="lph" placeholder="03XX-XXXXXXX"/></div>
+      <div class="fg"><label for="lpw">Password</label><input type="password" id="lpw" placeholder="••••••••"/></div>
+      <div style="text-align:right;margin-bottom:16px"><a href="#" style="color:var(--g1);font-size:.82rem">Forgot password?</a></div>
+      <button class="btn-sub" onclick="doLogin()">Log In →</button>
+    </div>
+    <div id="sForm" style="display:none">
+      <div class="fg"><label for="snm">Full Name</label><input type="text" id="snm" placeholder="Your full name"/></div>
+      <div class="fg"><label for="sph">Mobile Number</label><input type="tel" id="sph" placeholder="03XX-XXXXXXX"/></div>
+      <div class="fg"><label for="srl">I am a…</label>
+        <select id="srl">
+          <option>Parent</option><option>Driver</option><option>School Admin</option>
+        </select>
+      </div>
+      <div class="fg"><label for="spw">Set Password</label><input type="password" id="spw" placeholder="Min 8 characters"/></div>
+      <button class="btn-sub" onclick="doSignup()">Create Account →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SOS MODAL ══════════════ -->
+<div class="moverlay" id="sosModal" role="dialog" aria-modal="true" aria-label="SOS Emergency">
+  <div class="mbox">
+    <button class="mcls" onclick="closeM('sosModal')" aria-label="Close">✕</button>
+    <div class="m-ic">🆘</div>
+    <div class="m-title" style="color:#ff8a80">Emergency SOS Activated</div>
+    <div class="m-sub">Alert sent to all contacts. Call directly if needed:</div>
+    <div class="sos-contacts">
+      <div class="sc glass"><div class="sc-ic">👮</div><div><div class="sc-name">Pakistan Police</div><div class="sc-num">15</div></div><button class="sc-btn" onclick="showToast('s','📞','Calling Police — 15')">📞 Call</button></div>
+      <div class="sc glass"><div class="sc-ic">🏥</div><div><div class="sc-name">Rescue 1122</div><div class="sc-num">1122</div></div><button class="sc-btn" onclick="showToast('s','📞','Calling Rescue 1122')">📞 Call</button></div>
+      <div class="sc glass"><div class="sc-ic">🩺</div><div><div class="sc-name">Edhi Foundation</div><div class="sc-num">115</div></div><button class="sc-btn" onclick="showToast('s','📞','Calling Edhi 115')">📞 Call</button></div>
+      <div class="sc glass"><div class="sc-ic">🏫</div><div><div class="sc-name">School Admin</div><div class="sc-num">0321-SCHOOL</div></div><button class="sc-btn" onclick="showToast('s','📞','Calling School Admin')">📞 Call</button></div>
+      <div class="sc glass"><div class="sc-ic">📱</div><div><div class="sc-name">SafeRide Support</div><div class="sc-num">0300-SAFERIDE</div></div><button class="sc-btn" onclick="showToast('s','📞','Calling SafeRide Support')">📞 Call</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TOAST CONTAINER ══════════════ -->
+<div id="tc" aria-live="polite"></div>
+
+<!-- ══════════════ JAVASCRIPT ══════════════ -->
+<script>
+'use strict';
+
+/* ─── PARTICLES ─── */
+(function(){
+  const c=document.getElementById('particleCanvas');
+  if(!c)return;
+  const ctx=c.getContext('2d');
+  let W,H,particles=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight}
+  resize();window.addEventListener('resize',resize);
+  for(let i=0;i<55;i++)particles.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+.5,dx:(Math.random()-.5)*.3,dy:-(Math.random()*.4+.15),op:Math.random()*.6+.2});
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(0,200,83,${p.op})`;ctx.fill();
+      p.x+=p.dx;p.y+=p.dy;
+      if(p.y<-5){p.y=H+5;p.x=Math.random()*W}
+      if(p.x<-5||p.x>W+5){p.x=Math.random()*W;p.y=H+5}
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ─── NAVBAR SCROLL ─── */
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>30);
+});
+function toggleNav(){document.getElementById('nav').classList.toggle('open')}
+
+/* ─── COUNTER ANIMATIONS ─── */
+function animCount(el,target,suffix=''){
+  let cur=0;const step=target/80;
+  const t=setInterval(()=>{
+    cur=Math.min(cur+step,target);
+    el.textContent=Math.floor(cur).toLocaleString()+(suffix?suffix:'');
+    if(cur>=target)clearInterval(t);
+  },18);
+}
+// hero counters
+animCount(document.getElementById('ctr1'),1200,'+');
+animCount(document.getElementById('ctr2'),8400,'+');
+animCount(document.getElementById('ctr3'),14,'');
+animCount(document.getElementById('ctr4'),240,'+');
+
+// stats bar counters (intersection observer)
+const statNums=document.querySelectorAll('.stat-num[data-target]');
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const t=parseInt(e.target.dataset.target);
+      const suf=e.target.dataset.target==='99'?'%':'+';
+      animCount(e.target,t,t===14?'':suf);
+      io.unobserve(e.target);
+    }
+  });
+},{threshold:.5});
+statNums.forEach(el=>io.observe(el));
+
+/* ─── ROLE SWITCHER ─── */
+function setRole(role,btn){
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const msgs={parent:'Parent view: Live tracking, parental controls, and attendance notifications.',driver:'Driver view: Route management, attendance marking, and earnings dashboard.',school:'School Admin view: Fleet overview, analytics, and bulk reporting.'};
+  showToast('i','👤',msgs[role]);
+}
+
+/* ─── HERO ETA ANIMATION ─── */
+let etaMin=6;
+setInterval(()=>{if(etaMin>0)etaMin--;document.getElementById('floatEta').textContent=etaMin>0?`Van arriving in ${etaMin} min`:'Van has arrived! ✅'},60000);
+
+/* ─── DATE ─── */
+document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-PK',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+/* ─── ATTENDANCE DATA ─── */
+const students=[
+  {id:1,n:'Aisha Rahman',ini:'AR',gr:'Grade 5',stop:'Johar Town Stop 1',st:'present',time:'7:32 AM'},
+  {id:2,n:'Bilal Hussain',ini:'BH',gr:'Grade 6',stop:'Garden Town Gate',st:'present',time:'7:38 AM'},
+  {id:3,n:'Fatima Noor',ini:'FN',gr:'Grade 4',stop:'Gulberg Main Blvd',st:'present',time:'7:45 AM'},
+  {id:4,n:'Hassan Ali',ini:'HA',gr:'Grade 7',stop:'Model Town Chowk',st:'absent',time:'—'},
+  {id:5,n:'Zainab Malik',ini:'ZM',gr:'Grade 3',stop:'Johar Town Stop 2',st:'present',time:'7:35 AM'},
+  {id:6,n:'Omar Sheikh',ini:'OS',gr:'Grade 8',stop:'DHA Phase 1 Gate',st:'pending',time:'—'},
+  {id:7,n:'Sara Iqbal',ini:'SI',gr:'Grade 5',stop:'Cavalry Ground',st:'present',time:'7:50 AM'},
+  {id:8,n:'Ahmed Raza',ini:'AR',gr:'Grade 6',stop:'Garden Town Gate',st:'absent',time:'—'},
+  {id:9,n:'Mariam Khan',ini:'MK',gr:'Grade 4',stop:'Johar Town Stop 1',st:'present',time:'7:33 AM'},
+  {id:10,n:'Umar Farooq',ini:'UF',gr:'Grade 7',stop:'Model Town Chowk',st:'pending',time:'—'},
+  {id:11,n:'Laiba Tahir',ini:'LT',gr:'Grade 3',stop:'Gulberg Main Blvd',st:'present',time:'7:46 AM'},
+  {id:12,n:'Kamran Baig',ini:'KB',gr:'Grade 5',stop:'Cavalry Ground',st:'absent',time:'—'},
+  {id:13,n:'Ayesha Siddiqui',ini:'AS',gr:'Grade 6',stop:'Johar Town Stop 3',st:'present',time:'7:40 AM'},
+  {id:14,n:'Danish Mehmood',ini:'DM',gr:'Grade 4',stop:'Johar Town Stop 2',st:'pending',time:'—'},
+  {id:15,n:'Hira Baig',ini:'HB',gr:'Grade 5',stop:'DHA Phase 1 Gate',st:'present',time:'7:52 AM'},
+];
+
+function renderAtt(data){
+  const b=document.getElementById('attBody');
+  b.innerHTML=data.map(s=>`
+    <tr id="row-${s.id}">
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="av-chip">${s.ini}</div><span style="font-weight:600">${s.n}</span></div></td>
+      <td style="color:var(--tm)">${s.gr}</td>
+      <td style="color:var(--tm);font-size:.82rem">${s.stop}</td>
+      <td><span class="spill sp-${s.st==='present'?'p':s.st==='absent'?'a':'pen'}">${s.st==='present'?'Present':s.st==='absent'?'Absent':'Pending'}</span></td>
+      <td style="color:var(--tm);font-size:.82rem">${s.time}</td>
+      <td style="display:flex;gap:8px">
+        ${s.st==='pending'?`<button class="mark-p" onclick="markS(${s.id},'present')">✅ Present</button><button class="mark-a" onclick="markS(${s.id},'absent')">❌ Absent</button>`:'<span style="font-size:.78rem;color:var(--tm)">Marked</span>'}
+      </td>
+    </tr>`).join('');
+  const prs=data.filter(x=>x.st==='present').length;
+  const ab=data.filter(x=>x.st==='absent').length;
+  const pen=data.filter(x=>x.st==='pending').length;
+  document.getElementById('aP').textContent=prs;
+  document.getElementById('aA').textContent=ab;
+  document.getElementById('aPen').textContent=pen;
+  document.getElementById('aT').textContent=data.length;
+  document.getElementById('aRate').textContent=data.length>0?Math.round(prs/data.length*100)+'%':'0%';
+}
+function markS(id,status){
+  const s=students.find(x=>x.id===id);if(!s)return;
+  s.st=status;s.time=new Date().toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit'});
+  renderAtt(students);
+  showToast(status==='present'?'s':'e',status==='present'?'✅':'❌',`${s.n} marked ${status==='present'?'Present':'Absent'}`);
+}
+function filterAtt(q){
+  renderAtt(students.filter(s=>s.n.toLowerCase().includes(q.toLowerCase())||s.stop.toLowerCase().includes(q.toLowerCase())));
+}
+renderAtt(students);
+
+/* ─── DRIVER FORM ─── */
+let curStep=1;
+const stepLabels=['Step 1 of 3 — Personal Info','Step 2 of 3 — Vehicle Info','Step 3 of 3 — Route Info'];
+function updStep(s){
+  document.getElementById('stepInfo').textContent=stepLabels[s-1];
+  [1,2,3].forEach(i=>{
+    const d=document.getElementById('sd'+i);
+    d.classList.remove('active','done');
+    if(i<s)d.classList.add('done');
+    if(i===s)d.classList.add('active');
+  });
+}
+function ns(from){
+  const reqs=[...document.querySelectorAll(`#fs${from} [required]`)];
+  for(const el of reqs){
+    if(!el.value.trim()){
+      el.focus();el.style.borderColor='#e53935';
+      setTimeout(()=>el.style.borderColor='',2000);
+      showToast('e','⚠️','Please fill all required fields.');return;
+    }
+  }
+  document.getElementById('fs'+from).classList.remove('active');
+  document.getElementById('fs'+(from+1)).classList.add('active');
+  curStep=from+1;updStep(curStep);
+}
+function ps(from){
+  document.getElementById('fs'+from).classList.remove('active');
+  document.getElementById('fs'+(from-1)).classList.add('active');
+  curStep=from-1;updStep(curStep);
+}
+function fileChg(inp,txtId){
+  const el=document.getElementById(txtId);
+  if(inp.files.length>0)el.textContent='✅ '+Array.from(inp.files).map(f=>f.name).join(', ');
+}
+function submitDrv(){
+  const reqs=[...document.querySelectorAll('#fs3 [required]')];
+  for(const el of reqs){
+    if(!el.value.trim()){el.focus();el.style.borderColor='#e53935';setTimeout(()=>el.style.borderColor='',2000);showToast('e','⚠️','Please fill all required fields.');return;}
+  }
+  document.querySelectorAll('.form-hdr,.steps-bar,.form-step').forEach(el=>el.style.display='none');
+  const success=document.getElementById('drvSuccess');
+  success.style.display='block';
+  document.getElementById('refId').textContent='SR-'+Math.random().toString(36).substr(2,8).toUpperCase();
+  showToast('s','✅','Driver registration submitted successfully!');
+}
+// CNIC auto-format
+document.getElementById('dc').addEventListener('input',function(){
+  let v=this.value.replace(/\D/g,'');
+  if(v.length>5&&v.length<=12)v=v.slice(0,5)+'-'+v.slice(5);
+  else if(v.length>12)v=v.slice(0,5)+'-'+v.slice(5,12)+'-'+v.slice(12,13);
+  this.value=v;
+});
+
+/* ─── PARENTAL TABS ─── */
+let geoInit=false,gMap,geoCirs=[],zoneCount=0;
+function pTab(name){
+  ['live','geo','alerts','child'].forEach(t=>{
+    document.getElementById('pp-'+t).classList.remove('active');
+    document.getElementById('ptab-'+t).classList.remove('active');
+  });
+  document.getElementById('pp-'+name).classList.add('active');
+  document.getElementById('ptab-'+name).classList.add('active');
+  if(name==='geo'&&!geoInit)initGeoMap();
+  if(name==='child')initChildChart();
+}
+
+/* ─── LIVE MAP (Leaflet + OpenStreetMap) ─── */
+(function(){
+  const map=L.map('liveMap',{zoomControl:true,attributionControl:true}).setView([31.5204,74.3587],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+  const stops=[
+    [31.4697,74.2728,'🏠 Stop 1 · Johar Town'],
+    [31.4900,74.3000,'🏘️ Stop 2 · Garden Town'],
+    [31.5100,74.3300,'🏢 Stop 3 · Gulberg Blvd'],
+    [31.5204,74.3587,'📍 Stop 4 · Model Town'],
+    [31.5350,74.3700,'🏫 City Grammar School'],
+  ];
+  L.polyline(stops.map(s=>[s[0],s[1]]),{color:'#00c853',weight:4,opacity:.7,dashArray:'10,7'}).addTo(map);
+  const si=L.divIcon({html:'<div style="width:11px;height:11px;background:#00c853;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px rgba(0,200,83,.9)"></div>',className:'',iconSize:[11,11],iconAnchor:[5.5,5.5]});
+  stops.forEach((s,i)=>{
+    const ic=i===stops.length-1?L.divIcon({html:'<div style="font-size:1.3rem">🏫</div>',className:'',iconSize:[26,26],iconAnchor:[13,13]}):si;
+    L.marker([s[0],s[1]],{icon:ic}).addTo(map).bindPopup(`<b>${s[2]}</b>`);
+  });
+  const vi=L.divIcon({html:'<div style="font-size:1.7rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6));animation:vanBob .8s ease-in-out infinite alternate">🚐</div>',className:'',iconSize:[34,34],iconAnchor:[17,17]});
+  let prog=.62;
+  const vm=L.marker([31.4697+(31.5350-31.4697)*.62,74.2728+(74.3700-74.2728)*.62],{icon:vi}).addTo(map).bindPopup('<b>Van #PK-47</b><br>Usman Javed<br><span style="color:#00c853">●</span> En route');
+  setInterval(()=>{
+    prog=Math.min(prog+.004,1);
+    const lat=31.4697+(31.5350-31.4697)*prog;
+    const lng=74.2728+(74.3700-74.2728)*prog;
+    vm.setLatLng([lat,lng]);
+    const rem=Math.round((1-prog)*14);
+    const dist=((1-prog)*5.2).toFixed(1);
+    document.getElementById('etaTxt').textContent=rem>0?`Arriving in ~${rem} min · ${dist} km remaining`:'✅ Van arrived at school!';
+    document.getElementById('pFill').style.width=(prog*100)+'%';
+    document.getElementById('vanSpeed').textContent=Math.floor(25+Math.random()*20)+' km/h';
+    if(prog>=.99)showToast('s','🏫','Van #PK-47 has arrived at school!');
+  },1800);
+})();
+
+/* ─── GEOFENCE MAP ─── */
+function initGeoMap(){
+  geoInit=true;
+  gMap=L.map('gMap').setView([31.5204,74.3587],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(gMap);
+}
+function addZone(type){
+  if(!geoInit)initGeoMap();
+  const cfg={school:{pos:[31.535,74.370],r:400,color:'#00c853',label:'🏫 School Safe Zone (400m)'},home:{pos:[31.4697,74.2728],r:300,color:'#42a5f5',label:'🏠 Home Safe Zone (300m)'}};
+  const c=cfg[type];
+  const cir=L.circle(c.pos,{radius:c.r,color:c.color,fillColor:c.color,fillOpacity:.12,weight:2,dashArray:'10,6'}).addTo(gMap).bindPopup(`<b>${c.label}</b>`).openPopup();
+  geoCirs.push(cir);gMap.setView(c.pos,15);
+  zoneCount++;document.getElementById('zc').textContent=`${zoneCount} zone${zoneCount>1?'s':''} set`;
+  showToast('s',type==='school'?'🏫':'🏠',`${type==='school'?'School':'Home'} geofence zone set! Alerts will fire on entry/exit.`);
+}
+function clearZones(){
+  geoCirs.forEach(c=>c.remove());geoCirs=[];zoneCount=0;
+  document.getElementById('zc').textContent='0 zones set';
+  showToast('i','🗑️','All geofence zones cleared.');
+}
+
+/* ─── CHART.JS CHARTS ─── */
+const chartDef={
+  plugins:{legend:{labels:{color:'#7a95b5',font:{family:'Outfit',size:11}}}},
+  scales:{
+    x:{ticks:{color:'#7a95b5',font:{family:'Outfit'}},grid:{color:'rgba(255,255,255,.05)'}},
+    y:{ticks:{color:'#7a95b5',font:{family:'Outfit'}},grid:{color:'rgba(255,255,255,.06)'}}
+  }
+};
+// Attendance chart
+new Chart(document.getElementById('attChart'),{
+  type:'bar',
+  data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'Present',data:[18,17,19,15,18,0,0],backgroundColor:'rgba(0,200,83,.7)',borderRadius:6},{label:'Absent',data:[2,3,1,5,2,0,0],backgroundColor:'rgba(229,57,53,.5)',borderRadius:6}]},
+  options:{...chartDef,responsive:true,plugins:{...chartDef.plugins}}
+});
+// Revenue chart
+new Chart(document.getElementById('revChart'),{
+  type:'line',
+  data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[{label:'Revenue (PKR 000s)',data:[420,580,750,920,1100,1380],borderColor:'#00c853',backgroundColor:'rgba(0,200,83,.1)',fill:true,tension:.4,pointBackgroundColor:'#00c853',pointRadius:5}]},
+  options:{...chartDef,responsive:true}
+});
+// City distribution
+new Chart(document.getElementById('cityChart'),{
+  type:'doughnut',
+  data:{labels:['Lahore','Karachi','Islamabad','Rawalpindi','Faisalabad','Others'],datasets:[{data:[35,28,15,10,7,5],backgroundColor:['#00c853','#00bfa5','#42a5f5','#7c4dff','#ffcc02','#ff6e6e'],borderWidth:0,hoverOffset:6}]},
+  options:{responsive:true,plugins:{legend:{position:'right',labels:{color:'#7a95b5',font:{family:'Outfit',size:11}}}}}
+});
+// Driver performance
+new Chart(document.getElementById('drvChart'),{
+  type:'radar',
+  data:{labels:['On-Time','Safety','Rating','Attendance','Customer Score'],datasets:[{label:'SafeRide Avg',data:[98,95,96,97,94],borderColor:'#00c853',backgroundColor:'rgba(0,200,83,.15)',pointBackgroundColor:'#00c853'}]},
+  options:{responsive:true,scales:{r:{ticks:{color:'#7a95b5',font:{family:'Outfit',size:10}},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#7a95b5',font:{family:'Outfit',size:11}}}},plugins:{legend:{labels:{color:'#7a95b5',font:{family:'Outfit'}}}}}
+});
+// Child chart (lazy)
+let childChartInit=false;
+function initChildChart(){
+  if(childChartInit)return;childChartInit=true;
+  new Chart(document.getElementById('childChart'),{
+    type:'bar',
+    data:{labels:['W1','W2','W3','W4'],datasets:[{label:'Days Present',data:[5,4,5,4],backgroundColor:'rgba(0,200,83,.7)',borderRadius:5},{label:'Days Absent',data:[0,1,0,1],backgroundColor:'rgba(229,57,53,.4)',borderRadius:5}]},
+    options:{...chartDef,responsive:true,plugins:{legend:{labels:{color:'#7a95b5',font:{family:'Outfit',size:11}}}}}
+  });
+}
+
+/* ─── MODAL ─── */
+function openM(id){document.getElementById(id).classList.add('open')}
+function closeM(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.moverlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.moverlay.open').forEach(el=>el.classList.remove('open'))});
+function mTab(name,btn){
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.getElementById('lForm').style.display=name==='l'?'block':'none';
+  document.getElementById('sForm').style.display=name==='s'?'block':'none';
+}
+function doLogin(){
+  const ph=document.getElementById('lph').value,pw=document.getElementById('lpw').value;
+  if(!ph||!pw){showToast('e','⚠️','Please enter your mobile number and password.');return;}
+  closeM('loginModal');showToast('s','✅',`Welcome back! Logged in as ${ph}`);
+}
+function doSignup(){
+  const nm=document.getElementById('snm').value,ph=document.getElementById('sph').value,pw=document.getElementById('spw').value;
+  if(!nm||!ph||!pw){showToast('e','⚠️','Please fill all fields.');return;}
+  if(pw.length<8){showToast('e','⚠️','Password must be at least 8 characters.');return;}
+  closeM('loginModal');showToast('s','🎉',`Account created! Welcome, ${nm}!`);
+}
+
+/* ─── TOAST ─── */
+function showToast(type,icon,msg){
+  const tc=document.getElementById('tc');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.innerHTML=`<span class="t-ic">${icon}</span><span class="t-msg">${msg}</span>`;
+  tc.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(30px)';t.style.transition='.4s ease';setTimeout(()=>t.remove(),400)},3800);
+}
+
+/* ─── VAN BOUNCE KEYFRAME (inline) ─── */
+const style=document.createElement('style');
+style.textContent='@keyframes vanBob{0%{transform:translateY(0)}100%{transform:translateY(-4px)}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
