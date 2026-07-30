@@ -3,10 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  base: process.env.GITHUB_ACTIONS ? '/saferide-frontend/' : '/',
   server: {
     port: 5173,
     proxy: {
-      // Proxy all /api calls to the Express backend
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
